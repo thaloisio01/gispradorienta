@@ -1,0 +1,49 @@
+﻿:root {
+  --bg: #f2efe8;
+  --paper: #fffdf9;
+  --ink: #1f2328;
+  --muted: #6b7280;
+  --brand: #1f6feb;
+  --accent: #ff8b3d;
+  --ok: #0f766e;
+  --warn: #b45309;
+  --danger: #b91c1c;
+  --radius: 14px;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Segoe UI", Tahoma, sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 85% 10%, #dbeafe 0%, transparent 35%),
+    radial-gradient(circle at 15% 90%, #fde68a 0%, transparent 35%),
+    var(--bg);
+}
+.container { max-width: 1200px; margin: 0 auto; padding: 16px; }
+.card { background: var(--paper); border: 1px solid #e5e7eb; border-radius: var(--radius); padding: 14px; box-shadow: 0 6px 18px rgba(0,0,0,.06); }
+.grid { display: grid; gap: 12px; }
+.grid-2 { grid-template-columns: repeat(auto-fit,minmax(280px,1fr)); }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+input, select, textarea, button {
+  border-radius: 10px; border: 1px solid #d1d5db; padding: 10px; font: inherit;
+}
+button { background: var(--brand); color: #fff; border: none; cursor: pointer; }
+button.alt { background: #374151; }
+button.warn { background: var(--warn); }
+button.ghost { background: transparent; color: var(--brand); border: 1px solid var(--brand); }
+small { color: var(--muted); }
+h1,h2,h3 { margin: 6px 0 10px; }
+.badge { font-size: 12px; padding: 4px 8px; border-radius: 999px; background: #e5e7eb; }
+.status-Iniciado { background: #dbeafe; }
+.status-Em\ andamento { background: #fde68a; }
+.status-Revisado { background: #ddd6fe; }
+.status-Concluído { background: #bbf7d0; }
+.status-Submetido { background: #fecaca; }
+.progress-wrap { width: 100%; background: #e5e7eb; border-radius: 999px; height: 8px; }
+.progress { height: 8px; border-radius: 999px; background: linear-gradient(90deg,#1f6feb,#22c55e); }
+.chat { max-height: 220px; overflow: auto; border: 1px solid #e5e7eb; border-radius: 10px; padding: 8px; background: #fff; }
+.msg { padding: 8px; border-radius: 10px; margin-bottom: 6px; background: #f3f4f6; }
+.msg strong { display: block; }
+.kpi { font-weight: 700; font-size: 24px; }
+@media (max-width: 720px){ .desktop-only{ display:none; } }
