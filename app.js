@@ -49,10 +49,18 @@
   }
 
   function ensureOrientador() {
-    if (!state.users.some(u => u.id === "o1" || u.role === "orientador")) {
+    const orientador = state.users.find(u => u.id === "o1" || u.role === "orientador");
+    if (!orientador) {
       state.users.unshift({ id: "o1", nome: "Álvaro", role: "orientador", senha: "1234", email: "orientador@demo.com" });
       save();
+      return;
     }
+    orientador.id = "o1";
+    orientador.role = "orientador";
+    orientador.nome = "Álvaro";
+    orientador.senha = "1234";
+    if (!orientador.email) orientador.email = "orientador@demo.com";
+    save();
   }
 
   function esc(s) {
