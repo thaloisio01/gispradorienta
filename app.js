@@ -278,19 +278,18 @@
     appEl.innerHTML = `
       <div class="container">
         ${topBar()}
-        <div class="card"><h3>Filtros rápidos</h3><div class="row"><select id="fAluno"><option value="">Todos os alunos</option>${alunos.map(a => `<option value="${a.id}" ${fAluno === a.id ? "selected" : ""}>${esc(a.nome)}</option>`).join("")}</select><select id="fStatus"><option value="">Todos os status</option>${STATUS.map(s => `<option value="${s}" ${fStatus === s ? "selected" : ""}>${s}</option>`).join("")}</select><select id="fTipo"><option value="">Todos os tipos</option>${WORK_TYPES.map(t => `<option value="${t}" ${fTipo === t ? "selected" : ""}>${t}</option>`).join("")}</select><button class="ghost" id="applyFilter">Aplicar</button></div></div>
+        <div class="card"><h3>Filtros rápidos</h3><div class="row"><select id="fAluno"><option value="">Todos os alunos</option>${alunos.map(a => `<option value="${a.id}" ${fAluno === a.id ? "selected" : ""}>${esc(a.nome)}</option>`).join("")}</select><select id="fStatus"><option value="">Todos os status</option>${STATUS.map(s => `<option value="${s}" ${fStatus === s ? "selected" : ""}>${s}</option>`).join("")}</select><select id="fTipo"><option value="">Todos os tipos</option>${WORK_TYPES.map(t => `<option value="${t}" ${fTipo === t ? "selected" : ""}>${t}</option>`).join("")}</select><button class="ghost" id="applyFilter">Aplicar</button><button class="alt" id="clearFilter">Limpar</button></div></div>
 
         <div class="card" style="margin-top:12px;border:2px solid #ef4444;"><h3 style="color:#b91c1c;">Atrasados críticos</h3>${critical.length ? critical.map(r => `<div><small><b>${esc((r.aluno || {}).nome || "Aluno")}</b> - ${esc(r.work.titulo)} | ${esc(DATE_LABELS[r.field] || r.field)} | atrasado há ${Math.abs(r.diff)} dia(s)</small></div>`).join("") : `<small>Sem atrasos críticos.</small>`}</div>
 
         ${CATS.map(cat => {
-          const group = alunos.filter(a => a.categoria === cat);
+          const group = alunos.filter(a => a.categoria === cat).filter(a => !fAluno || a.id === fAluno);
           const body = group.map(al => {
             let ws = state.works.filter(w => w.alunoId === al.id);
             if (fAluno) ws = ws.filter(w => w.alunoId === fAluno);
             if (fStatus) ws = ws.filter(w => w.status === fStatus);
             if (fTipo) ws = ws.filter(w => w.tipo === fTipo);
-            if (!ws.length) return "";
-            return `<div class="card" style="margin:8px 0;background:#fff;"><div class="row" style="justify-content:space-between;"><strong>${esc(al.nome)}</strong><small>${esc(al.email || "")}</small></div><small>${esc(al.instituicao || "")} ${al.curso ? "| " + esc(al.curso) : ""}</small>${ws.map(w => workCard(w, true)).join("")}</div>`;
+            return `<div class="card" style="margin:8px 0;background:#fff;"><div class="row" style="justify-content:space-between;"><strong>${esc(al.nome)}</strong><small>${esc(al.email || "")}</small></div><small>${esc(al.instituicao || "")} ${al.curso ? "| " + esc(al.curso) : ""}</small>${ws.length ? ws.map(w => workCard(w, true)).join("") : "<small>Sem trabalhos para este filtro.</small>"}</div>`;
           }).join("");
           return `<div class="card" style="margin-top:12px;"><h3>${cat}</h3>${body || `<small>Sem resultados.</small>`}</div>`;
         }).join("")}
@@ -301,6 +300,24 @@
     document.getElementById("applyFilter").onclick = () => {
       filters.aluno = val("fAluno");
       filters.status = val("fStatus");
+      filters.tipo = val("fTipo");
+      orientadorView();
+    };
+    document.getElementById("clearFilter").onclick = () => {
+      filters.aluno = "";
+      filters.status = "";
+      filters.tipo = "";
+      orientadorView();
+    };
+    document.getElementById("fAluno").onchange = () => {
+      filters.aluno = val("fAluno");
+      orientadorView();
+    };
+    document.getElementById("fStatus").onchange = () => {
+      filters.status = val("fStatus");
+      orientadorView();
+    };
+    document.getElementById("fTipo").onchange = () => {
       filters.tipo = val("fTipo");
       orientadorView();
     };
