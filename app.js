@@ -153,7 +153,10 @@
       try {
         if (!current) return;
         await syncFromServer();
-        render();
+        // Evita reset visual do formulário do aluno durante digitação/seleção.
+        if (current.role === "orientador") {
+          render();
+        }
       } catch (_) {}
     }, 4000);
   }
