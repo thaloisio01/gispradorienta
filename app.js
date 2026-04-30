@@ -242,6 +242,7 @@
       <div class="card" style="margin-top:10px;">
         <div class="row" style="justify-content:space-between;"><strong>${esc(w.titulo)}</strong><span class="badge">${esc(w.status || "Iniciado")}</span></div>
         <small>${esc(aluno.nome)} | ${esc(w.tipo || "")}</small>
+        ${isOrientador ? "" : `<div class="row" style="margin-top:6px;"><button class="ghost" data-edit-title="${w.id}">Editar título</button><button class="alt" data-delete-work="${w.id}">Apagar trabalho</button></div>`}
         <div><a href="${esc(w.linkDrive || "#")}" target="_blank">Abrir Drive</a></div>
         <div class="progress-wrap" style="margin-top:8px;"><div class="progress" style="width:${Number(w.progresso || 0)}%"></div></div>
         <small>${Number(w.progresso || 0)}%</small>
@@ -322,13 +323,22 @@
     const wTipo = document.getElementById("wtipo");
     const wLink = document.getElementById("wlink");
     if (wTit) wTit.oninput = () => { alunoDraft.titulo = wTit.value || ""; };
-    if (wTipo) wTipo.onchange = () => { alunoDraft.tipo = wTipo.value || "Projeto"; };
+    if (wTipo) {
+      const syncTipo = () => { alunoDraft.tipo = (wTipo.value || "Projeto"); };
+      // Alguns navegadores disparam eventos diferentes; cobrimos todos.
+      wTipo.onchange = syncTipo;
+      wTipo.oninput = syncTipo;
+      wTipo.onblur = syncTipo;
+      wTipo.onclick = syncTipo;
+      syncTipo();
+    }
     if (wLink) wLink.oninput = () => { alunoDraft.linkDrive = wLink.value || ""; };
 
     document.getElementById("addWork").onclick = async () => {
       const titulo = val("wtit");
       const tipoEl = document.getElementById("wtipo");
-      const tipo = tipoEl ? String(tipoEl.value || "").trim() : "";
+      const tipoDom = tipoEl ? String(tipoEl.value || "").trim() : "";
+      const tipo = String(alunoDraft.tipo || tipoDom || "Projeto").trim();
       const linkDrive = val("wlink");
       if (!titulo) return alert("Título obrigatório");
       state.works.push({
@@ -411,6 +421,37 @@
         };
       });
     } else {
+      appEl.querySelectorAll("button[data-edit-title]").forEach(btn => {
+        btn.onclick = async () => {
+          const wid = btn.getAttribute("data-edit-title");
+          const w = byId(state.works, wid);
+          if (!w) return;
+          const novoTitulo = prompt("Novo título do trabalho:", w.titulo || "");
+          if (novoTitulo === null) return;
+          const tituloFinal = String(novoTitulo).trim();
+          if (!tituloFinal) return alert("Título não pode ficar vazio.");
+          w.titulo = tituloFinal;
+          addAudit("Edição de trabalho", `${current.nome} alterou título do trabalho ${wid}`);
+          await saveRemoteState();
+          render();
+        };
+      });
+
+      appEl.querySelectorAll("button[data-delete-work]").forEach(btn => {
+        btn.onclick = async () => {
+          const wid = btn.getAttribute("data-delete-work");
+          const w = byId(state.works, wid);
+          if (!w) return;
+          const ok = confirm(`Tem certeza que deseja apagar o trabalho \"${w.titulo}\"?`);
+          if (!ok) return;
+          state.works = state.works.filter(x => x.id !== wid);
+          state.comments = state.comments.filter(c => c.workId !== wid);
+          addAudit("Exclusão de trabalho", `${current.nome} apagou o trabalho ${w.titulo}`);
+          await saveRemoteState();
+          render();
+        };
+      });
+
       appEl.querySelectorAll("button[data-upload]").forEach(btn => {
         btn.onclick = async () => {
           const wid = btn.getAttribute("data-upload");
