@@ -28,6 +28,7 @@
   let state = JSON.parse(JSON.stringify(defaultState));
   let current = null;
   const filters = { aluno: "", status: "", tipo: "" };
+  const alunoDraft = { titulo: "", tipo: "Projeto", linkDrive: "" };
   let booting = true;
   let pollingTimer = null;
 
@@ -308,12 +309,19 @@
     appEl.innerHTML = `
       <div class="container">
         ${topBar()}
-        <div class="card" style="margin-bottom:12px;"><h3>Novo trabalho</h3><div class="row"><input id="wtit" placeholder="Título" /><select id="wtipo">${WORK_TYPES.map(t => `<option value="${esc(t)}">${t}</option>`).join("")}</select><input id="wlink" placeholder="Link do Drive" /><button id="addWork">Adicionar</button></div></div>
+        <div class="card" style="margin-bottom:12px;"><h3>Novo trabalho</h3><div class="row"><input id="wtit" placeholder="Título" value="${esc(alunoDraft.titulo)}" /><select id="wtipo">${WORK_TYPES.map(t => `<option value="${esc(t)}" ${alunoDraft.tipo === t ? "selected" : ""}>${t}</option>`).join("")}</select><input id="wlink" placeholder="Link do Drive" value="${esc(alunoDraft.linkDrive)}" /><button id="addWork">Adicionar</button></div></div>
         <div class="card"><h3>Meus trabalhos</h3>${ws.length ? ws.map(w => workCard(w, false)).join("") : `<small>Sem trabalhos.</small>`}</div>
       </div>
     `;
 
     document.getElementById("logout").onclick = () => { current = null; render(); };
+    const wTit = document.getElementById("wtit");
+    const wTipo = document.getElementById("wtipo");
+    const wLink = document.getElementById("wlink");
+    if (wTit) wTit.oninput = () => { alunoDraft.titulo = wTit.value || ""; };
+    if (wTipo) wTipo.onchange = () => { alunoDraft.tipo = wTipo.value || "Projeto"; };
+    if (wLink) wLink.oninput = () => { alunoDraft.linkDrive = wLink.value || ""; };
+
     document.getElementById("addWork").onclick = async () => {
       const titulo = val("wtit");
       const tipoEl = document.getElementById("wtipo");
@@ -334,6 +342,9 @@
       });
       addAudit("Novo trabalho", `${current.nome} criou: ${titulo}`);
       await saveRemoteState();
+      alunoDraft.titulo = "";
+      alunoDraft.tipo = "Projeto";
+      alunoDraft.linkDrive = "";
       render();
     };
 
