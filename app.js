@@ -28,7 +28,7 @@
   let state = JSON.parse(JSON.stringify(defaultState));
   let current = null;
   const filters = { aluno: "", status: "", tipo: "" };
-  const alunoDraft = { titulo: "", tipo: "Projeto", linkDrive: "" };
+  const alunoDraft = { titulo: "", tipo: "", linkDrive: "" };
   let booting = true;
   let pollingTimer = null;
 
@@ -313,7 +313,7 @@
     appEl.innerHTML = `
       <div class="container">
         ${topBar()}
-        <div class="card" style="margin-bottom:12px;"><h3>Novo trabalho</h3><div class="row"><input id="wtit" placeholder="Título" value="${esc(alunoDraft.titulo)}" /><select id="wtipo">${WORK_TYPES.map(t => `<option value="${esc(t)}" ${alunoDraft.tipo === t ? "selected" : ""}>${t}</option>`).join("")}</select><input id="wlink" placeholder="Link do Drive" value="${esc(alunoDraft.linkDrive)}" /><button id="addWork">Adicionar</button></div></div>
+        <div class="card" style="margin-bottom:12px;"><h3>Novo trabalho</h3><div class="row"><input id="wtit" placeholder="Título" value="${esc(alunoDraft.titulo)}" /><select id="wtipo"><option value="" ${alunoDraft.tipo ? "" : "selected"}>Selecione o tipo</option>${WORK_TYPES.map(t => `<option value="${esc(t)}" ${alunoDraft.tipo === t ? "selected" : ""}>${t}</option>`).join("")}</select><input id="wlink" placeholder="Link do Drive" value="${esc(alunoDraft.linkDrive)}" /><button id="addWork">Adicionar</button></div></div>
         <div class="card"><h3>Meus trabalhos</h3>${ws.length ? ws.map(w => workCard(w, false)).join("") : `<small>Sem trabalhos.</small>`}</div>
       </div>
     `;
@@ -322,9 +322,13 @@
     const wTit = document.getElementById("wtit");
     const wTipo = document.getElementById("wtipo");
     const wLink = document.getElementById("wlink");
-    if (wTit) wTit.oninput = () => { alunoDraft.titulo = wTit.value || ""; };
+    if (wTit) wTit.oninput = () => {
+      alunoDraft.titulo = wTit.value || "";
+      // Hard-fix para Chrome: mantém visualmente o tipo escolhido após digitar título.
+      if (wTipo && alunoDraft.tipo) wTipo.value = alunoDraft.tipo;
+    };
     if (wTipo) {
-      const syncTipo = () => { alunoDraft.tipo = (wTipo.value || "Projeto"); };
+      const syncTipo = () => { alunoDraft.tipo = (wTipo.value || ""); };
       // Alguns navegadores disparam eventos diferentes; cobrimos todos.
       wTipo.onchange = syncTipo;
       wTipo.oninput = syncTipo;
@@ -338,14 +342,15 @@
       const titulo = val("wtit");
       const tipoEl = document.getElementById("wtipo");
       const tipoDom = tipoEl ? String(tipoEl.value || "").trim() : "";
-      const tipo = String(alunoDraft.tipo || tipoDom || "Projeto").trim();
+      const tipo = String(alunoDraft.tipo || tipoDom || "").trim();
       const linkDrive = val("wlink");
       if (!titulo) return alert("Título obrigatório");
+      if (!tipo) return alert("Selecione o tipo do trabalho.");
       state.works.push({
         id: uid(),
         alunoId: current.id,
         titulo,
-        tipo: tipo || "Projeto",
+        tipo,
         linkDrive,
         status: "Iniciado",
         progresso: 0,
@@ -356,7 +361,7 @@
       addAudit("Novo trabalho", `${current.nome} criou: ${titulo}`);
       await saveRemoteState();
       alunoDraft.titulo = "";
-      alunoDraft.tipo = "Projeto";
+      alunoDraft.tipo = "";
       alunoDraft.linkDrive = "";
       render();
     };
