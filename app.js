@@ -1,7 +1,7 @@
 ﻿(function () {
   const CATS = ["IC", "TCC", "Mestrado", "Doutorado"];
   const STATUS = ["Iniciado", "Em andamento", "Revisado", "Concluído", "Submetido"];
-  const WORK_TYPES = ["Projeto", "Relatório parcial", "Relatório Final", "TCC", "Dissertação", "Tese", "Resumo", "Boletim", "Artigo", "Outro"];
+  const WORK_TYPES = ["Projeto", "Relatório parcial", "Relatório Final", "TCC", "Dissertação", "Tese", "Resumo", "Boletim", "Artigo", "Livro", "Capítulo de livro", "Outro"];
   const DATE_LABELS = {
     qualificacao: "Qualificação",
     defesa: "Defesa",
@@ -23,6 +23,7 @@
 
   let state = loadState();
   let current = null;
+  const filters = { aluno: "", status: "", tipo: "" };
 
   ensureOrientador();
 
@@ -46,6 +47,11 @@
 
   function save() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  function refreshState() {
+    state = loadState();
+    ensureOrientador();
   }
 
   function ensureOrientador() {
@@ -319,12 +325,13 @@
   }
 
   function orientadorView() {
+    refreshState();
     const alunos = state.users.filter(u => u.role === "aluno");
     const critical = collectCritical();
 
-    const fAluno = val("fAluno");
-    const fStatus = val("fStatus");
-    const fTipo = val("fTipo");
+    const fAluno = filters.aluno;
+    const fStatus = filters.status;
+    const fTipo = filters.tipo;
 
     app.innerHTML = `
       <div class="container">
@@ -334,8 +341,8 @@
           <h3>Filtros rápidos</h3>
           <div class="row">
             <select id="fAluno"><option value="">Todos os alunos</option>${alunos.map(a => `<option value="${a.id}" ${fAluno === a.id ? "selected" : ""}>${esc(a.nome)}</option>`).join("")}</select>
-            <select id="fStatus"><option value="">Todos os status</option>${STATUS.map(s => `<option ${fStatus === s ? "selected" : ""}>${s}</option>`).join("")}</select>
-            <select id="fTipo"><option value="">Todos os tipos</option>${WORK_TYPES.map(t => `<option ${fTipo === t ? "selected" : ""}>${t}</option>`).join("")}</select>
+            <select id="fStatus"><option value="">Todos os status</option>${STATUS.map(s => `<option value="${s}" ${fStatus === s ? "selected" : ""}>${s}</option>`).join("")}</select>
+            <select id="fTipo"><option value="">Todos os tipos</option>${WORK_TYPES.map(t => `<option value="${t}" ${fTipo === t ? "selected" : ""}>${t}</option>`).join("")}</select>
             <button class="ghost" id="applyFilter">Aplicar</button>
           </div>
         </div>
@@ -388,7 +395,12 @@
       current = null;
       render();
     };
-    document.getElementById("applyFilter").onclick = orientadorView;
+    document.getElementById("applyFilter").onclick = () => {
+      filters.aluno = val("fAluno");
+      filters.status = val("fStatus");
+      filters.tipo = val("fTipo");
+      orientadorView();
+    };
     document.getElementById("reportGeral").onclick = reportGeral;
     document.getElementById("goAluno").onclick = () => {
       current = state.users.find(u => u.role === "aluno") || current;
@@ -403,6 +415,7 @@
   }
 
   function alunoView() {
+    refreshState();
     const ws = state.works.filter(w => w.alunoId === current.id);
 
     app.innerHTML = `
@@ -539,6 +552,7 @@
 
   function render() {
     try {
+      refreshState();
       if (!current) {
         loginView();
         return;
@@ -563,5 +577,10 @@
   }
 
   save();
+  window.addEventListener("storage", () => {
+    if (!current) return;
+    refreshState();
+    render();
+  });
   render();
 })();
