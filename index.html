@@ -8,6 +8,16 @@
 </head>
 <body>
   <div id="app"></div>
-  <script src="app.js"></script>
+  <script>
+    if (location.protocol === "file:") {
+      document.getElementById("app").innerHTML =
+        '<div style="max-width:760px;margin:40px auto;padding:16px;border:1px solid #ddd;border-radius:12px;font-family:Segoe UI,Tahoma,sans-serif;">' +
+        "<h2>Abra pelo link publicado</h2>" +
+        "<p>Esta versão usa Firebase (banco online) e pode não funcionar abrindo o arquivo localmente.</p>" +
+        "<p>Use o link do GitHub Pages do projeto, ou rode em servidor local (http://localhost).</p>" +
+        "</div>";
+    }
+  </script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
