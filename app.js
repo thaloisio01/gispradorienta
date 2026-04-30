@@ -308,16 +308,30 @@
     appEl.innerHTML = `
       <div class="container">
         ${topBar()}
-        <div class="card" style="margin-bottom:12px;"><h3>Novo trabalho</h3><div class="row"><input id="wtit" placeholder="Título" /><select id="wtipo">${WORK_TYPES.map(t => `<option>${t}</option>`).join("")}</select><input id="wlink" placeholder="Link do Drive" /><button id="addWork">Adicionar</button></div></div>
+        <div class="card" style="margin-bottom:12px;"><h3>Novo trabalho</h3><div class="row"><input id="wtit" placeholder="Título" /><select id="wtipo">${WORK_TYPES.map(t => `<option value="${esc(t)}">${t}</option>`).join("")}</select><input id="wlink" placeholder="Link do Drive" /><button id="addWork">Adicionar</button></div></div>
         <div class="card"><h3>Meus trabalhos</h3>${ws.length ? ws.map(w => workCard(w, false)).join("") : `<small>Sem trabalhos.</small>`}</div>
       </div>
     `;
 
     document.getElementById("logout").onclick = () => { current = null; render(); };
     document.getElementById("addWork").onclick = async () => {
-      const titulo = val("wtit"), tipo = val("wtipo"), linkDrive = val("wlink");
+      const titulo = val("wtit");
+      const tipoEl = document.getElementById("wtipo");
+      const tipo = tipoEl ? String(tipoEl.value || "").trim() : "";
+      const linkDrive = val("wlink");
       if (!titulo) return alert("Título obrigatório");
-      state.works.push({ id: uid(), alunoId: current.id, titulo, tipo, linkDrive, status: "Iniciado", progresso: 0, datas: { qualificacao: "", defesa: "", entrega_parcial: "", entrega_final: "", submissao_artigo: "" }, review: { decision: "Pendente", pendencias: "" }, anexos: [] });
+      state.works.push({
+        id: uid(),
+        alunoId: current.id,
+        titulo,
+        tipo: tipo || "Projeto",
+        linkDrive,
+        status: "Iniciado",
+        progresso: 0,
+        datas: { qualificacao: "", defesa: "", entrega_parcial: "", entrega_final: "", submissao_artigo: "" },
+        review: { decision: "Pendente", pendencias: "" },
+        anexos: []
+      });
       addAudit("Novo trabalho", `${current.nome} criou: ${titulo}`);
       await saveRemoteState();
       render();
