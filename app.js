@@ -168,7 +168,7 @@
       const nome = normalizeText(val("nome"));
       const senha = val("senha");
       current = state.users.find(u => normalizeText(u.nome) === nome && String(u.senha) === senha) || null;
-      if (!current && (nome === "alvaro" || nome === "álvaro" || nome === "orientador") && senha === "1234") {
+      if (!current && nome === "orientador" && senha === "1234") {
         current = state.users.find(u => u.id === "o1") || state.users.find(u => u.role === "orientador") || null;
       }
       if (!current) {
@@ -419,10 +419,6 @@
           </div>
         </div>
 
-        <div class="card" style="margin-bottom:12px;">
-          <div class="row"><button class="alt" id="goOrientador">Modo orientador</button></div>
-        </div>
-
         <div class="card">
           <h3>Meus trabalhos</h3>
           ${ws.length ? ws.map(w => workCard(w, false)).join("") : `<small>Sem trabalhos.</small>`}
@@ -432,11 +428,6 @@
 
     document.getElementById("logout").onclick = () => {
       current = null;
-      render();
-    };
-
-    document.getElementById("goOrientador").onclick = () => {
-      current = state.users.find(u => u.id === "o1") || state.users.find(u => u.role === "orientador") || null;
       render();
     };
 
