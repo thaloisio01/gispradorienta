@@ -1,5 +1,4 @@
-﻿import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+﻿import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
 (function () {
   const CATS = ["IC", "TCC", "Mestrado", "Doutorado"];
@@ -13,16 +12,9 @@ import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstat
     submissao_artigo: "Submissão de artigo"
   };
 
-  // PREENCHA COM SUAS CHAVES DO FIREBASE (Project settings > Your apps > SDK setup)
-  const firebaseConfig = {
-    apiKey: "AIzaSyApNdAfv4-5bdjmvHdJGMjDhV4NneZCkVY",
-    authDomain: "orientahub-47a39.firebaseapp.com",
-    projectId: "orientahub-47a39",
-    storageBucket: "orientahub-47a39.firebasestorage.app",
-    messagingSenderId: "735627995452",
-    appId: "1:735627995452:web:f3efe5abd14408532c9639",
-    measurementId: "G-2DQC5FXDZK"
-  };
+  // PREENCHA COM OS DADOS DO SUPABASE (Project Settings > API)
+  const SUPABASE_URL = "https://wehlukgburcprreixwef.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_tZkxKR4A8y6FLxBB_HkEmQ_JOtL-HVy";
 
   const defaultState = {
     users: [
@@ -36,13 +28,10 @@ import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstat
   let state = JSON.parse(JSON.stringify(defaultState));
   let current = null;
   const filters = { aluno: "", status: "", tipo: "" };
-  let isBootstrapping = true;
+  let booting = true;
+  let pollingTimer = null;
 
   const appEl = document.getElementById("app");
-
-  const fbApp = initializeApp(firebaseConfig);
-  const db = getFirestore(fbApp);
-  const stateRef = doc(db, "orientahub", "state");
 
   function esc(s) {
     return String(s || "")
@@ -61,10 +50,6 @@ import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstat
   function uid() { return "id_" + Math.random().toString(36).slice(2) + Date.now().toString(36); }
   function val(id) { const el = document.getElementById(id); return el ? String(el.value || "").trim() : ""; }
 
-  function addAudit(action, details) {
-    state.audit.push({ ts: Date.now(), actor: current ? current.nome : "Sistema", action, details });
-  }
-
   function ensureOrientador() {
     const o = state.users.find(u => u.id === "o1" || u.role === "orientador");
     if (!o) {
@@ -78,26 +63,8 @@ import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstat
     if (!o.email) o.email = "orientador@demo.com";
   }
 
-  async function save() {
-    await setDoc(stateRef, state);
-  }
-
-  async function bootstrapState() {
-    const snap = await getDoc(stateRef);
-    if (!snap.exists()) {
-      ensureOrientador();
-      await setDoc(stateRef, state);
-    } else {
-      const data = snap.data() || {};
-      state = {
-        users: Array.isArray(data.users) ? data.users : [],
-        works: Array.isArray(data.works) ? data.works : [],
-        comments: Array.isArray(data.comments) ? data.comments : [],
-        audit: Array.isArray(data.audit) ? data.audit : []
-      };
-      ensureOrientador();
-      await setDoc(stateRef, state);
-    }
+  function addAudit(action, details) {
+    state.audit.push({ ts: Date.now(), actor: current ? current.nome : "Sistema", action, details });
   }
 
   function daysDiff(dateStr) {
@@ -124,12 +91,78 @@ import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstat
     return out;
   }
 
+  function getClient() {
+    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }
+
+  async function fetchRemoteState() {
+    const supabase = getClient();
+    const { data, error } = await supabase
+      .from("app_state")
+      .select("state")
+      .eq("id", "main")
+      .single();
+
+    if (error && error.code !== "PGRST116") throw error;
+    if (!data) return null;
+    return data.state;
+  }
+
+  async function saveRemoteState() {
+    const supabase = getClient();
+    const { error } = await supabase
+      .from("app_state")
+      .upsert({ id: "main", state, updated_at: new Date().toISOString() }, { onConflict: "id" });
+    if (error) throw error;
+  }
+
+  async function bootstrap() {
+    const raw = await fetchRemoteState();
+    if (!raw) {
+      ensureOrientador();
+      await saveRemoteState();
+      return;
+    }
+    state = {
+      users: Array.isArray(raw.users) ? raw.users : [],
+      works: Array.isArray(raw.works) ? raw.works : [],
+      comments: Array.isArray(raw.comments) ? raw.comments : [],
+      audit: Array.isArray(raw.audit) ? raw.audit : []
+    };
+    ensureOrientador();
+    await saveRemoteState();
+  }
+
+  async function syncFromServer() {
+    const raw = await fetchRemoteState();
+    if (!raw) return;
+    state = {
+      users: Array.isArray(raw.users) ? raw.users : [],
+      works: Array.isArray(raw.works) ? raw.works : [],
+      comments: Array.isArray(raw.comments) ? raw.comments : [],
+      audit: Array.isArray(raw.audit) ? raw.audit : []
+    };
+    ensureOrientador();
+    if (current) current = state.users.find(u => u.id === current.id) || null;
+  }
+
+  function startPolling() {
+    if (pollingTimer) clearInterval(pollingTimer);
+    pollingTimer = setInterval(async () => {
+      try {
+        if (!current) return;
+        await syncFromServer();
+        render();
+      } catch (_) {}
+    }, 4000);
+  }
+
   function loginView() {
     appEl.innerHTML = `
       <div class="container">
         <div class="card" style="max-width:560px;margin:30px auto;">
           <h1>OrientaHub</h1>
-          <small><strong>Versão:</strong> v3.0 (Firebase)</small>
+          <small><strong>Versão:</strong> v3.1 (Supabase)</small>
           <div class="grid" style="margin-top:12px;">
             <input id="nome" placeholder="Nome" />
             <input id="senha" type="password" placeholder="Senha" />
@@ -159,15 +192,20 @@ import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstat
     document.getElementById("showSenhaLogin").onchange = e => { document.getElementById("senha").type = e.target.checked ? "text" : "password"; };
     document.getElementById("showSenhaCadastro").onchange = e => { document.getElementById("csenha").type = e.target.checked ? "text" : "password"; };
 
-    document.getElementById("entrar").onclick = () => {
-      const nome = normalizeText(val("nome"));
-      const senha = val("senha");
-      current = state.users.find(u => normalizeText(u.nome) === nome && String(u.senha) === senha) || null;
-      if (!current && nome === "orientador" && senha === "1234") {
-        current = state.users.find(u => u.id === "o1") || state.users.find(u => u.role === "orientador") || null;
+    document.getElementById("entrar").onclick = async () => {
+      try {
+        await syncFromServer();
+        const nome = normalizeText(val("nome"));
+        const senha = val("senha");
+        current = state.users.find(u => normalizeText(u.nome) === nome && String(u.senha) === senha) || null;
+        if (!current && nome === "orientador" && senha === "1234") {
+          current = state.users.find(u => u.id === "o1") || state.users.find(u => u.role === "orientador") || null;
+        }
+        if (!current) return alert("Login inválido");
+        render();
+      } catch (e) {
+        alert("Falha ao conectar no banco online.");
       }
-      if (!current) return alert("Login inválido");
-      render();
     };
 
     document.getElementById("toggleCadastro").onclick = () => {
@@ -178,11 +216,12 @@ import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstat
     document.getElementById("cadastrarAluno").onclick = async () => {
       const nome = val("cnome"), email = val("cemail"), senha = val("csenha"), categoria = val("ccat");
       if (!nome || !email || !senha) return alert("Nome, email e senha são obrigatórios.");
+      await syncFromServer();
       if (state.users.some(u => normalizeText(u.nome) === normalizeText(nome))) return alert("Já existe um usuário com esse nome.");
 
       state.users.push({ id: uid(), nome, email, senha, role: "aluno", categoria, instituicao: val("cinstituicao"), curso: val("ccurso") });
       addAudit("Cadastro de aluno", `Aluno cadastrado: ${nome}`);
-      await save();
+      await saveRemoteState();
       alert("Aluno cadastrado com sucesso.");
     };
   }
@@ -202,6 +241,7 @@ import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstat
         <div><a href="${esc(w.linkDrive || "#")}" target="_blank">Abrir Drive</a></div>
         <div class="progress-wrap" style="margin-top:8px;"><div class="progress" style="width:${Number(w.progresso || 0)}%"></div></div>
         <small>${Number(w.progresso || 0)}%</small>
+
         <div style="margin-top:6px;"><span class="badge">Revisão: ${esc(review.decision || "Pendente")}</span></div>
         ${review.pendencias ? `<small>Pendências: ${esc(review.pendencias)}</small>` : ""}
 
@@ -234,8 +274,9 @@ import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstat
       <div class="container">
         ${topBar()}
         <div class="card"><h3>Filtros rápidos</h3><div class="row"><select id="fAluno"><option value="">Todos os alunos</option>${alunos.map(a => `<option value="${a.id}" ${fAluno === a.id ? "selected" : ""}>${esc(a.nome)}</option>`).join("")}</select><select id="fStatus"><option value="">Todos os status</option>${STATUS.map(s => `<option value="${s}" ${fStatus === s ? "selected" : ""}>${s}</option>`).join("")}</select><select id="fTipo"><option value="">Todos os tipos</option>${WORK_TYPES.map(t => `<option value="${t}" ${fTipo === t ? "selected" : ""}>${t}</option>`).join("")}</select><button class="ghost" id="applyFilter">Aplicar</button></div></div>
+
         <div class="card" style="margin-top:12px;border:2px solid #ef4444;"><h3 style="color:#b91c1c;">Atrasados críticos</h3>${critical.length ? critical.map(r => `<div><small><b>${esc((r.aluno || {}).nome || "Aluno")}</b> - ${esc(r.work.titulo)} | ${esc(DATE_LABELS[r.field] || r.field)} | atrasado há ${Math.abs(r.diff)} dia(s)</small></div>`).join("") : `<small>Sem atrasos críticos.</small>`}</div>
-        <div class="card" style="margin-top:12px;"><h3>Calendário mensal de prazos</h3><small>Resumo: ${critical.length} prazo(s) atrasado(s).</small></div>
+
         ${CATS.map(cat => {
           const group = alunos.filter(a => a.categoria === cat);
           const body = group.map(al => {
@@ -258,6 +299,7 @@ import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstat
       filters.tipo = val("fTipo");
       orientadorView();
     };
+
     bindSharedActions(true);
   }
 
@@ -273,13 +315,11 @@ import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstat
 
     document.getElementById("logout").onclick = () => { current = null; render(); };
     document.getElementById("addWork").onclick = async () => {
-      const titulo = val("wtit");
-      const tipo = val("wtipo");
-      const linkDrive = val("wlink");
+      const titulo = val("wtit"), tipo = val("wtipo"), linkDrive = val("wlink");
       if (!titulo) return alert("Título obrigatório");
       state.works.push({ id: uid(), alunoId: current.id, titulo, tipo, linkDrive, status: "Iniciado", progresso: 0, datas: { qualificacao: "", defesa: "", entrega_parcial: "", entrega_final: "", submissao_artigo: "" }, review: { decision: "Pendente", pendencias: "" }, anexos: [] });
       addAudit("Novo trabalho", `${current.nome} criou: ${titulo}`);
-      await save();
+      await saveRemoteState();
       render();
     };
 
@@ -295,7 +335,7 @@ import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstat
         if (!msg) return;
         state.comments.push({ id: uid(), workId: wid, autorId: current.id, msg, ts: Date.now() });
         addAudit("Comentário", `${current.nome} comentou no trabalho ${wid}`);
-        await save();
+        await saveRemoteState();
         render();
       };
     });
@@ -309,7 +349,7 @@ import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstat
         if (!w) return;
         w.datas[key] = inp.value;
         addAudit("Prazo alterado", `${DATE_LABELS[key]} em ${w.titulo} -> ${inp.value}`);
-        await save();
+        await saveRemoteState();
       };
     });
 
@@ -324,7 +364,7 @@ import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstat
           w.status = st ? st.value : w.status;
           w.progresso = Math.max(0, Math.min(100, Number(pg ? pg.value : w.progresso) || 0));
           addAudit("Progresso atualizado", `${w.titulo} -> ${w.status}/${w.progresso}%`);
-          await save();
+          await saveRemoteState();
           render();
         };
       });
@@ -338,7 +378,7 @@ import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstat
           const pend = document.getElementById("pend_" + wid);
           w.review = { decision, pendencias: pend ? pend.value : "" };
           addAudit("Revisão", `${w.titulo} -> ${decision}`);
-          await save();
+          await saveRemoteState();
           render();
         };
       });
@@ -352,7 +392,7 @@ import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstat
           Array.from(f.files).forEach(file => w.anexos.push({ name: file.name, size: file.size, ts: Date.now() }));
           w.review = { decision: "Pendente", pendencias: "" };
           addAudit("Upload", `${current.nome} enviou anexo em ${w.titulo}`);
-          await save();
+          await saveRemoteState();
           render();
         };
       });
@@ -360,8 +400,8 @@ import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstat
   }
 
   function render() {
-    if (isBootstrapping) {
-      appEl.innerHTML = `<div class="container"><div class="card"><h3>Conectando banco online...</h3></div></div>`;
+    if (booting) {
+      appEl.innerHTML = `<div class="container"><div class="card"><h3>Conectando Supabase...</h3></div></div>`;
       return;
     }
     if (!current) return loginView();
@@ -371,25 +411,15 @@ import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstat
 
   async function start() {
     try {
-      await bootstrapState();
-      onSnapshot(stateRef, (snap) => {
-        if (snap.exists()) {
-          const data = snap.data();
-          state = {
-            users: Array.isArray(data.users) ? data.users : [],
-            works: Array.isArray(data.works) ? data.works : [],
-            comments: Array.isArray(data.comments) ? data.comments : [],
-            audit: Array.isArray(data.audit) ? data.audit : []
-          };
-          ensureOrientador();
-          if (current) current = state.users.find(u => u.id === current.id) || null;
-          render();
-        }
-      });
-      isBootstrapping = false;
+      if (!SUPABASE_URL.includes("http") || SUPABASE_ANON_KEY.includes("COLE_")) {
+        throw new Error("Preencha SUPABASE_URL e SUPABASE_ANON_KEY no app.js");
+      }
+      await bootstrap();
+      booting = false;
+      startPolling();
       render();
     } catch (e) {
-      appEl.innerHTML = `<div class="container"><div class="card"><h3>Erro de configuração Firebase</h3><pre>${esc(e.message || String(e))}</pre><small>Preencha firebaseConfig no app.js.</small></div></div>`;
+      appEl.innerHTML = `<div class="container"><div class="card"><h3>Erro de configuração Supabase</h3><pre>${esc(e.message || String(e))}</pre></div></div>`;
     }
   }
 
