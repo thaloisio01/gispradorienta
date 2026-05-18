@@ -14,6 +14,8 @@
 
   const SUPABASE_URL = "https://wehlukgburcprreixwef.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_tZkxKR4A8y6FLxBB_HkEmQ_JOtL-HVy";
+  // URL da Edge Function de envio de e-mail (preencher após deploy da função no Supabase)
+  const RESET_EMAIL_FUNCTION_URL = "https://wehlukgburcprreixwef.functions.supabase.co/smooth-handler";
 
   const defaultState = {
     users: [
@@ -179,10 +181,30 @@
     await saveRemoteState();
 
     const resetLink = `${window.location.origin}${window.location.pathname}#reset=${encodeURIComponent(token)}`;
-    const subject = encodeURIComponent("Redefinição de senha - GISPRAD");
-    const body = encodeURIComponent(`Olá ${user.nome},\n\nUse este link para redefinir sua senha (válido por 30 minutos):\n${resetLink}\n\nSe você não solicitou, ignore este e-mail.`);
-    window.open(`mailto:${encodeURIComponent(user.email || email)}?subject=${subject}&body=${body}`, "_blank");
-    alert("E-mail de redefinição aberto. Envie para concluir.");
+    if (!RESET_EMAIL_FUNCTION_URL || RESET_EMAIL_FUNCTION_URL.includes("COLE_")) {
+      alert("Função de e-mail ainda não configurada. Configure RESET_EMAIL_FUNCTION_URL no app.js.");
+      return;
+    }
+
+    const resp = await fetch(RESET_EMAIL_FUNCTION_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify({
+        to: user.email || email,
+        name: user.nome,
+        resetLink
+      })
+    });
+
+    if (!resp.ok) {
+      const txt = await resp.text();
+      throw new Error(`Falha ao enviar e-mail: ${txt}`);
+    }
+    alert("E-mail de redefinição enviado com sucesso.");
   }
 
   function resetPasswordView(token) {
@@ -263,7 +285,11 @@
     document.getElementById("forgotPass").onclick = async () => {
       const email = prompt("Digite seu e-mail cadastrado:");
       if (!email) return;
-      await requestPasswordReset(email.trim());
+      try {
+        await requestPasswordReset(email.trim());
+      } catch (e) {
+        alert("Não foi possível enviar o e-mail de redefinição agora.");
+      }
     };
 
     document.getElementById("toggleCadastro").onclick = () => {
