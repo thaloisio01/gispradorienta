@@ -1,0 +1,10 @@
+﻿{
+  "name": "Lojinha da Jô",
+  "short_name": "Lojinha Jô",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f7f3ec",
+  "theme_color": "#7f1d1d",
+  "description": "Controle simples de produtos, vendas, estoque, lucro e valores a receber."
+}
+

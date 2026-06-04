@@ -1,23 +1,372 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>OrientaHub</title>
-  <link rel="stylesheet" href="styles.css" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#7f1d1d">
+  <title>Lojinha da Jô</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div id="app"></div>
-  <script>
-    if (location.protocol === "file:") {
-      document.getElementById("app").innerHTML =
-        '<div style="max-width:760px;margin:40px auto;padding:16px;border:1px solid #ddd;border-radius:12px;font-family:Segoe UI,Tahoma,sans-serif;">' +
-        "<h2>Abra pelo link publicado</h2>" +
-        "<p>Esta versão usa Firebase (banco online) e pode não funcionar abrindo o arquivo localmente.</p>" +
-        "<p>Use o link do GitHub Pages do projeto, ou rode em servidor local (http://localhost).</p>" +
-        "</div>";
-    }
-  </script>
-  <script type="module" src="app.js"></script>
+  <section id="loginScreen" class="login-screen" aria-labelledby="loginTitle">
+    <form id="loginForm" class="login-card">
+      <p class="eyebrow">acesso da lojinha</p>
+      <h1 id="loginTitle">Lojinha da Jô</h1>
+      <div id="loginSeasonDecor" class="season-decor hidden" aria-hidden="true"></div>
+      <p id="loginSeasonMessage" class="season-message hidden"></p>
+      <label>Login
+        <input id="loginUser" type="text" autocomplete="username" required>
+      </label>
+      <label>Senha
+        <input id="loginPassword" type="password" autocomplete="current-password" required>
+      </label>
+      <button class="primary" type="submit">Entrar</button>
+      <p id="loginError" class="login-error" role="alert"></p>
+    </form>
+  </section>
+
+  <div id="appShell" class="hidden">
+    <header class="topbar">
+      <div class="brand-wrap">
+        <img class="brand-logo" src="assets/logo-lojinha.png" alt="Logo Lojinha da Jô" onerror="this.classList.add('hidden')"><span class="brand-mark">Jô</span>
+        <div>
+          <p class="eyebrow">controle simples</p>
+          <h1>Lojinha da Jô</h1>
+        </div>
+      </div>
+      <div class="top-actions">
+        <span id="syncStatus" class="sync-status">Modo local</span>
+        <button id="topBackupBtn" class="primary top-backup" type="button">Baixar backup agora</button>
+        <button id="installBtn" class="icon-button hidden" type="button" title="Instalar aplicativo">Instalar</button>
+        <button id="logoutBtn" class="icon-button" type="button" title="Sair do aplicativo">Sair</button>
+      </div>
+    </header>
+    <div id="syncWarning" class="app-warning hidden"><strong>Atenção:</strong> este aparelho ainda não salvou online. Confira a internet, aguarde aparecer “Sincronizado” ou faça backup antes de continuar.</div>
+    <section class="sync-panel" aria-label="Estado da sincronização">
+      <div><span>Internet</span><strong id="internetStatus">Internet ok</strong></div>
+      <div><span>Nuvem</span><strong id="cloudStatus">Nuvem aguardando</strong></div>
+      <div><span>Última sincronização</span><strong id="lastSyncStatus">Ainda não sincronizou</strong></div>
+      <div><span>Backup</span><strong id="topBackupStatus">Último backup: nenhum</strong></div>
+    </section>
+
+    <nav class="tabs" aria-label="Navegação principal">
+      <button class="tab active" data-screen="dashboard" type="button"><span class="tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10.5V20h14v-9.5"/><path d="M9 20v-6h6v6"/></svg></span>Resumo</button>
+      <button class="tab" data-screen="sale" type="button"><span class="tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h2l2.2 10.5a2 2 0 0 0 2 1.5h7.4a2 2 0 0 0 2-1.6L21 8H7"/><circle cx="10" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/></svg></span>Vender</button>
+      <button class="tab" data-screen="products" type="button"><span class="tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 8.5 12 4 3 8.5l9 4.5 9-4.5Z"/><path d="M3 8.5v7L12 20l9-4.5v-7"/><path d="M12 13v7"/></svg></span>Produtos</button>
+      <button class="tab" data-screen="purchases" type="button"><span class="tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 8h12l-1 12H7L6 8Z"/><path d="M9 8a3 3 0 0 1 6 0"/><path d="M12 11v5"/><path d="M9.5 13.5h5"/></svg></span>Compras</button>
+      <button class="tab" data-screen="closing" type="button"><span class="tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 6h12v16H6Z"/><path d="M9 4h6"/><path d="M8 13l3 3 5-6"/></svg></span>Fechamento</button>
+      <button class="tab" data-screen="stockCheck" type="button"><span class="tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 6h10"/><path d="M4 12h8"/><path d="M4 18h7"/><circle cx="17" cy="16" r="3"/><path d="m20 19 2 2"/></svg></span>Conferir estoque</button>
+      <button class="tab" data-screen="shopping" type="button"><span class="tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 5h12"/><path d="M6 11h9"/><path d="M6 17h7"/><path d="M18 14v4"/><path d="M18 21h.01"/></svg></span>Lista de compras</button>
+      <button class="tab" data-screen="debts" type="button"><span class="tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16v13H4Z"/><path d="M4 7l3-4h14v4"/><path d="M16 13h4v4h-4a2 2 0 0 1 0-4Z"/></svg></span>A receber</button>
+      <button class="tab" data-screen="reports" type="button"><span class="tab-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 20h18"/><path d="M7 17v-6"/><path d="M12 17V7"/><path d="M17 17v-9"/></svg></span>Relatórios</button>
+    </nav>
+
+    <main>
+      <section id="dashboard" class="screen active" aria-labelledby="dashboardTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow accent-text">visão geral</p>
+            <h2 id="dashboardTitle">Resumo da lojinha</h2>
+          </div>
+          <span id="todayLabel"></span>
+        </div>
+        <section class="welcome-panel jo-panel">
+          <div class="jo-copy">
+            <p class="eyebrow accent-text">painel da Jô</p>
+            <h3 id="dashboardGreeting">Bom dia, Joelma 🌸</h3>
+            <p id="joTodaySales" class="jo-main-note">Hoje ainda não teve venda registrada. Quando vender, os cards abaixo atualizam sozinhos.</p>
+          </div>
+          <div class="jo-summary jo-summary-soft">
+            <p id="joPendingClients">Nenhum cliente pendente hoje.</p>
+            <p id="joLowStock">Estoque sem alerta de reposição.</p>
+            <p id="joTodayProfit">Tudo em ordem por enquanto.</p>
+          </div>
+        </section>
+        <div class="metrics">
+          <article class="metric"><i class="metric-icon">R$</i><span>Vendido hoje</span><strong id="todayRevenue">R$ 0,00</strong></article>
+          <article class="metric"><i class="metric-icon">%</i><span>Lucro hoje</span><strong id="todayProfit">R$ 0,00</strong></article>
+          <article class="metric"><i class="metric-icon">!</i><span>A receber</span><strong id="pendingAmount">R$ 0,00</strong></article>
+          <article class="metric"><i class="metric-icon">#</i><span>Estoque investido</span><strong id="stockCost">R$ 0,00</strong></article>
+        </div>
+        <div class="metrics">
+          <article class="metric month-metric"><i class="metric-icon">M</i><span>Vendido no mês</span><strong id="monthRevenue">R$ 0,00</strong></article>
+          <article class="metric month-metric"><i class="metric-icon">+</i><span>Lucro do mês</span><strong id="monthProfit">R$ 0,00</strong></article>
+          <article class="metric month-metric"><i class="metric-icon">V</i><span>Quantidade de vendas</span><strong id="monthSalesCount">0</strong></article>
+          <article class="metric month-metric"><i class="metric-icon">P</i><span>Valor pendente</span><strong id="monthPendingAmount">R$ 0,00</strong></article>
+        </div>
+        <section class="panel accent-panel">
+          <div class="panel-title-row">
+            <h3>Destaques do mês</h3>
+            <span class="soft-label">Produtos que merecem atenção</span>
+          </div>
+          <div class="highlight-grid">
+            <article class="highlight-card"><span>Mais vendido</span><strong id="monthTopSelling">Nenhuma venda no mês</strong><small id="monthTopSellingDetail">-</small></article>
+            <article class="highlight-card"><span>Maior lucro</span><strong id="monthTopProfit">Nenhuma venda no mês</strong><small id="monthTopProfitDetail">-</small></article>
+            <article class="highlight-card"><span>Parado no estoque</span><strong id="monthIdleStock">Tudo girando bem</strong><small id="monthIdleStockDetail">-</small></article>
+          </div>
+        </section>
+        <section class="panel accent-panel">
+          <div class="panel-title-row">
+            <h3>Ranking dos clientes</h3>
+            <span class="soft-label">Quem movimenta a lojinha</span>
+          </div>
+          <div class="customer-ranking-grid">
+            <article class="highlight-card customer-card"><span>Cliente VIP da Jô</span><strong id="customerVipName">Sem vendas ainda</strong><small id="customerVipDetail">-</small></article>
+            <article class="highlight-card customer-card"><span>Top comprador da semana</span><strong id="weeklyBuyerName">Sem vendas na semana</strong><small id="weeklyBuyerDetail">-</small></article>
+            <article class="highlight-card customer-card"><span>Maior valor em aberto</span><strong id="topDebtorName">Ninguém devendo</strong><small id="topDebtorDetail">-</small></article>
+            <article class="highlight-card customer-card"><span>Pagamento certinho</span><strong id="onTimePayerName">Sem histórico ainda</strong><small id="onTimePayerDetail">-</small></article>
+          </div>
+        </section>
+        <div class="two-columns">
+          <section class="panel accent-panel">
+            <h3>Produtos acabando</h3>
+            <div id="lowStockList" class="list empty-state">Nenhum produto cadastrado ainda.</div>
+          </section>
+          <section class="panel accent-panel">
+            <h3>Próximos pagamentos</h3>
+            <div id="upcomingDebts" class="list empty-state">Nenhuma venda pendente.</div>
+          </section>
+        </div>
+      </section>
+      <section id="sale" class="screen" aria-labelledby="saleTitle">
+        <div class="section-heading"><h2 id="saleTitle">Registrar venda</h2></div>
+        <form id="saleForm" class="panel form-grid">
+          <input id="editingSaleId" type="hidden">
+          <label>Tipo de venda<select id="saleMode"><option value="product">Com produto marcado</option><option value="amount">Venda só pelo valor</option></select></label>
+          <label id="saleCategoryWrap">Categoria<select id="saleCategory">
+            <option value="">Todas as categorias</option>
+            <option value="Bebidas">Bebidas</option>
+            <option value="Doces">Doces</option>
+            <option value="Chocolate">Chocolate</option>
+            <option value="Salgadinhos">Salgadinhos</option>
+            <option value="Lanches">Lanches</option>
+            <option value="Bolo">Bolo</option>
+            <option value="Pão">Pão</option>
+            <option value="Biscoitos">Biscoitos</option>
+            <option value="Entrega">Entrega</option>
+            <option value="Evento">Evento</option>
+            <option value="Outros">Outros</option>
+          </select></label>
+          <label id="saleProductSearchWrap">Buscar produto<input id="saleProductSearch" type="search" placeholder="Ex.: coca, bolo, café"></label>
+          <label id="saleProductWrap">Produto<select id="saleProduct" required></select></label>
+          <label id="saleQuantityWrap">Quantidade<input id="saleQuantity" type="number" min="1" step="1" value="1" required></label>
+          <label id="quickSaleAmountWrap" class="hidden">Valor vendido<input id="quickSaleAmount" type="number" min="0.01" step="0.01" placeholder="0,00"></label>
+          <label id="quickSaleNoteWrap" class="hidden">Observação<input id="quickSaleNote" type="text" placeholder="Ex.: venda sem marcar produto"></label>
+          <label id="saleDiscountWrap">Desconto R$<input id="saleDiscount" type="number" min="0" step="0.01" value="0"></label>
+          <label>Data da venda<input id="saleDate" type="date" required></label>
+          <label>Cliente<input id="customerName" type="text" placeholder="Nome de quem comprou"></label>
+          <label>Pagamento<select id="paymentStatus"><option value="paid-now">Pago na hora</option><option value="payday">Pagamento</option><option value="voucher-payday">Vale pagamento</option><option value="voucher">Vale</option></select></label>
+          <label id="dueDateWrap">Data combinada<input id="dueDate" type="date"></label>
+          <div class="form-total"><span>Total da venda</span><strong id="salePreview">R$ 0,00</strong><small id="quickSaleEstimateText"></small></div>
+          <div class="form-actions"><button id="addToCartBtn" class="secondary cart-add-button" type="button"><span class="button-icon" aria-hidden="true">&#128722;</span>Adicionar ao carrinho</button><button id="saleSubmitBtn" class="primary" type="submit">Salvar venda</button><button id="cancelEditSale" class="secondary hidden" type="button">Cancelar edição</button></div>
+        </form>
+        <section id="saleCartPanel" class="panel cart-panel hidden">
+          <div class="panel-title-row">
+            <h3>Carrinho da venda</h3>
+            <span id="cartCountLabel" class="soft-label">0 item</span>
+          </div>
+          <div class="table-wrap"><table><thead><tr><th>Produto</th><th>Categoria</th><th>Quantidade</th><th>Valor</th><th></th></tr></thead><tbody id="saleCartTable"></tbody></table></div>
+          <div class="cart-footer"><strong>Total da venda: <span id="cartTotal">R$ 0,00</span></strong><button id="clearCartBtn" class="secondary" type="button">Limpar carrinho</button></div>
+        </section>
+        <section id="saleReceiptPanel" class="panel receipt-panel hidden">
+          <div class="panel-title-row">
+            <h3>Recibinho da venda</h3>
+            <span class="soft-label">Pronto para WhatsApp</span>
+          </div>
+          <pre id="saleReceiptText" class="receipt-text"></pre>
+          <button id="copyReceiptBtn" class="primary" type="button">Copiar resumo para WhatsApp</button>
+        </section>
+        <section class="panel"><div class="panel-title-row"><h3>Últimas vendas</h3><button id="deleteAllSales" class="secondary danger" type="button">Excluir tudo</button></div><div class="table-wrap"><table><thead><tr><th>Data</th><th>Cliente</th><th>Produto</th><th>Categoria</th><th>Qtd.</th><th>Total</th><th>Pagamento</th><th></th></tr></thead><tbody id="recentSalesTable"></tbody></table></div></section>
+      </section>
+
+      <section id="products" class="screen" aria-labelledby="productsTitle">
+        <div class="section-heading"><h2 id="productsTitle">Produtos e estoque</h2></div>
+        <form id="productForm" class="panel form-grid">
+          <input id="editingProductId" type="hidden">
+          <label>Nome do produto<input id="productName" type="text" placeholder="Ex.: Café 500g" required></label>
+                    <label>Categoria<select id="productCategory" required>
+            <option value="Bebidas">Bebidas</option>
+            <option value="Doces">Doces</option>
+            <option value="Chocolate">Chocolate</option>
+            <option value="Salgadinhos">Salgadinhos</option>
+            <option value="Lanches">Lanches</option>
+            <option value="Bolo">Bolo</option>
+            <option value="Pão">Pão</option>
+            <option value="Biscoitos">Biscoitos</option>
+            <option value="Entrega">Entrega</option>
+            <option value="Evento">Evento</option>
+            <option value="Insumos / Materiais">Insumos / Materiais</option>
+            <option value="Outros">Outros</option>
+          </select></label>
+          <label>Custo inicial / ajuste<input id="productCost" type="number" min="0" step="0.01" placeholder="0,00" required></label>
+          <label>Preço de venda<input id="productPrice" type="number" min="0" step="0.01" placeholder="0,00" required></label>
+          <label>Quantidade em estoque<input id="productStock" type="number" min="0" step="1" placeholder="0" required></label>
+          <label>Avisar quando chegar em<input id="productMinStock" type="number" min="0" step="1" value="3" required></label>
+          <div class="form-actions"><button class="primary" type="submit">Salvar produto</button><button id="cancelEditProduct" class="secondary hidden" type="button">Cancelar edição</button></div>
+        </form>
+        <section class="panel"><div class="panel-title-row"><h3>Lista de produtos</h3><button id="deleteAllProducts" class="secondary danger" type="button">Excluir tudo</button></div><div class="table-wrap"><table><thead><tr><th>Produto</th><th>Categoria</th><th>Custo médio</th><th>Venda</th><th>Lucro un.</th><th>Lucro %</th><th>Estoque</th><th></th></tr></thead><tbody id="productsTable"></tbody></table></div></section>
+        <section id="productHistoryPanel" class="panel product-history-panel hidden"></section>
+      </section>
+
+      <section id="purchases" class="screen" aria-labelledby="purchasesTitle">
+        <div class="section-heading"><h2 id="purchasesTitle">Compras e reposição</h2></div>
+        <form id="purchaseForm" class="panel form-grid"><input id="editingPurchaseId" type="hidden">
+          <label>Produto comprado<select id="purchaseProduct" required></select></label>
+          <label>Quantidade comprada<input id="purchaseQuantity" type="number" min="1" step="1" value="1" required></label>
+          <label>Valor pago por unidade<input id="purchaseUnitCost" type="number" min="0" step="0.01" placeholder="0,00" required></label>
+          <label>Data da compra<input id="purchaseDate" type="date" required></label>
+          <label>Mercado/observação<input id="purchaseNote" type="text" placeholder="Ex.: mercado, promoção"></label>
+          <div class="form-total"><span>Total da compra</span><strong id="purchasePreview">R$ 0,00</strong></div>
+          <div class="form-actions"><button id="purchaseSubmitBtn" class="primary" type="submit">Salvar compra</button><button id="cancelEditPurchase" class="secondary hidden" type="button">Cancelar edição</button></div>
+        </form>
+        <section class="panel purchase-day-panel">
+          <div class="panel-title-row">
+            <h3>Gastos de compras</h3>
+            <label class="inline-date">Ver dia<input id="purchaseSummaryDate" type="date"></label>
+          </div>
+          <div class="metrics compact-metrics">
+            <article class="metric"><i class="metric-icon">H</i><span>Gasto hoje</span><strong id="purchaseTodayTotal">R$ 0,00</strong></article>
+            <article class="metric"><i class="metric-icon">D</i><span id="purchaseDayLabel">Gasto no dia</span><strong id="purchaseDayTotal">R$ 0,00</strong></article>
+            <article class="metric"><i class="metric-icon">M</i><span>Mercadorias</span><strong id="purchaseDayMerchandise">R$ 0,00</strong></article>
+            <article class="metric"><i class="metric-icon">I</i><span>Insumos</span><strong id="purchaseDaySupplies">R$ 0,00</strong></article>
+          </div>
+          <p id="purchaseDayDetail" class="helper-text">Nenhuma compra nesse dia.</p>
+        </section>
+        <section class="panel"><div class="panel-title-row"><h3>Últimas compras</h3><button id="deleteAllPurchases" class="secondary danger" type="button">Excluir tudo</button></div><div class="table-wrap"><table><thead><tr><th>Data</th><th>Produto</th><th>Categoria</th><th>Qtd.</th><th>Pago un.</th><th>Total</th><th>Obs.</th><th></th></tr></thead><tbody id="purchasesTable"></tbody></table></div></section>
+      </section>
+
+      <section id="closing" class="screen" aria-labelledby="closingTitle">
+        <div class="section-heading"><h2 id="closingTitle">Fechamento do dia</h2><span id="closingDateLabel"></span></div>
+        <section class="panel filter-panel"><h3>Período do fechamento</h3><div class="form-grid compact-grid"><label>Tipo de fechamento<select id="closingMode"><option value="day">Fechamento do dia</option><option value="month">Fechamento do mês</option></select></label><label id="closingDateWrap">Escolha o dia<input id="closingDate" type="date"></label><label id="closingMonthWrap">Escolha o mês<input id="closingMonth" type="month"></label><div class="form-actions closing-actions"><button id="generateMonthSummary" class="primary" type="button">Gerar resumo do mês</button></div></div></section>
+        <div class="metrics">
+          <article class="metric"><i class="metric-icon">R$</i><span id="closingSoldLabel">Vendido no dia</span><strong id="closingSold">R$ 0,00</strong></article>
+          <article class="metric"><i class="metric-icon">OK</i><span id="closingReceivedLabel">Recebido no dia</span><strong id="closingReceived">R$ 0,00</strong></article>
+          <article class="metric"><i class="metric-icon">P</i><span id="closingPendingLabel">Fiado do dia</span><strong id="closingPending">R$ 0,00</strong></article>
+          <article class="metric"><i class="metric-icon">%</i><span>Lucro estimado</span><strong id="closingProfit">R$ 0,00</strong></article>
+        </div>
+        <section class="panel accent-panel"><div class="panel-title-row"><h3>Resumo rápido</h3><button id="copyClosingSummary" class="secondary whatsapp-button" type="button">Copiar fechamento para WhatsApp</button></div><div id="closingSummary" class="closing-summary"></div></section>
+        <section id="officialMonthSummary" class="panel official-summary hidden"></section>
+      </section>
+
+      <section id="stockCheck" class="screen" aria-labelledby="stockCheckTitle">
+        <div class="section-heading"><h2 id="stockCheckTitle">Conferir estoque</h2></div>
+        <section class="panel accent-panel">
+          <div class="panel-title-row">
+            <h3>Contagem real da lojinha</h3>
+            <span class="soft-label">Use quando venderam e não marcaram o produto</span>
+          </div>
+          <p class="helper-text">Digite quanto sobrou de cada produto. Se o número contado for menor que o estoque do app, a diferença entra como venda por conferência.</p>
+          <form id="stockCheckForm">
+            <div class="form-grid compact-grid">
+              <label>Data da conferência<input id="stockCheckDate" type="date" required></label>
+              <div class="form-total"><span>Prévia</span><strong id="stockCheckPreview">Nenhuma diferença.</strong></div>
+            </div>
+            <div class="table-wrap stock-check-wrap"><table><thead><tr><th>Produto</th><th>Categoria</th><th>Estoque no app</th><th>Estoque contado</th><th>Diferença</th></tr></thead><tbody id="stockCheckTable"></tbody></table></div>
+            <div class="form-actions"><button class="primary" type="submit">Salvar conferência</button></div>
+          </form>
+        </section>
+      </section>
+      <section id="shopping" class="screen" aria-labelledby="shoppingTitle">
+        <div class="section-heading"><h2 id="shoppingTitle">Lista de compras</h2><span id="shoppingCountLabel"></span></div>
+        <section class="panel accent-panel"><h3>Produtos com estoque baixo</h3><div id="shoppingList" class="shopping-grid empty-state">Nenhum produto precisa comprar agora.</div></section>
+      </section>
+
+      <section id="debts" class="screen" aria-labelledby="debtsTitle">
+        <div class="section-heading"><h2 id="debtsTitle">Quem está devendo</h2></div>
+        <div class="metrics">
+          <article class="metric"><i class="metric-icon">!</i><span>Pessoas devendo</span><strong id="pendingCustomersCount">0</strong></article>
+          <article class="metric"><i class="metric-icon">R$</i><span>Total pendente</span><strong id="pendingDebtTotal">R$ 0,00</strong></article>
+          <article class="metric"><i class="metric-icon">X</i><span>Vencidas</span><strong id="lateDebtCount">0</strong></article>
+          <article class="metric"><i class="metric-icon">OK</i><span>Já recebidas</span><strong id="paidLaterCount">0</strong></article>
+        </div>
+        <section class="panel">
+          <div class="toolbar"><button id="showPending" class="secondary active-filter" type="button">Pendentes</button><button id="showPaidLater" class="secondary" type="button">Já recebidas</button><button id="deleteAllDebts" class="secondary danger" type="button">Excluir tudo</button></div>
+          <div id="debtCards" class="debt-grid"></div>
+          <div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Produto</th><th>Valor</th><th>Venda</th><th>Prazo</th><th></th></tr></thead><tbody id="debtsTable"></tbody></table></div>
+        </section>
+      </section>
+
+      <section id="reports" class="screen" aria-labelledby="reportsTitle">
+        <div class="section-heading"><h2 id="reportsTitle">Relatórios e backup</h2></div>
+        <section class="panel filter-panel">
+          <h3>Período do relatório</h3>
+          <div class="form-grid compact-grid">
+            <label>Filtro<select id="reportFilter"><option value="this-month">Este mês</option><option value="last-month">Mês passado</option><option value="custom">Período específico</option><option value="all">Tudo</option></select></label>
+            <label id="reportStartWrap">Data inicial<input id="reportStart" type="date"></label>
+            <label id="reportEndWrap">Data final<input id="reportEnd" type="date"></label>
+          </div>
+          <p id="reportPeriodLabel" class="period-label"></p>
+        </section>
+        <div class="metrics">
+          <article class="metric"><i class="metric-icon">R$</i><span>Total vendido no período</span><strong id="allRevenue">R$ 0,00</strong></article>
+          <article class="metric"><i class="metric-icon">%</i><span>Lucro bruto no período</span><strong id="allProfit">R$ 0,00</strong></article>
+          <article class="metric"><i class="metric-icon">I</i><span>Insumos no período</span><strong id="suppliesExpense">R$ 0,00</strong></article>
+          <article class="metric"><i class="metric-icon">L</i><span>Lucro final estimado</span><strong id="finalProfit">R$ 0,00</strong></article>
+          <article class="metric"><i class="metric-icon">#</i><span>Valor em estoque</span><strong id="stockSaleValue">R$ 0,00</strong></article>
+          <article class="metric"><i class="metric-icon">+</i><span>Lucro se vender tudo</span><strong id="expectedProfit">R$ 0,00</strong></article>
+        </div>
+        <section class="panel comparison-panel"><h3>Comparação com o mês anterior</h3><div id="monthComparisonText" class="comparison-lines">Escolha um mês para comparar.</div></section>
+        <section class="panel report-panel"><h3>Produto que mais vendeu no período</h3><p id="bestSeller">Ainda não há vendas registradas.</p></section>
+        <section class="panel report-charts-panel">
+          <h3>Gráficos simples</h3>
+          <div class="report-chart-grid">
+            <article class="report-box"><h4>Vendas por dia</h4><div id="salesByDayChart" class="bar-chart"></div></article>
+            <article class="report-box"><h4>Lucro por mês</h4><div id="profitByMonthChart" class="bar-chart"></div></article>
+          </div>
+        </section>
+        <section class="panel report-ranking-panel">
+          <h3>Rankings do período</h3>
+          <div class="report-ranking-grid">
+            <article class="report-box"><h4>Produtos mais vendidos</h4><div id="topProductsRanking" class="rank-list"></div></article>
+            <article class="report-box"><h4>Clientes que mais compram</h4><div id="topClientsRanking" class="rank-list"></div></article>
+            <article class="report-box"><h4>Produtos que deram mais lucro</h4><div id="topProfitProducts" class="rank-list"></div></article>
+            <article class="report-box"><h4>Produtos parados no estoque</h4><div id="idleProductsRanking" class="rank-list"></div></article>
+          </div>
+        </section>
+        <section class="panel backup-panel featured-backup"><h3>Guardar os dados</h3><p id="backupStatus" class="backup-status">Último backup feito em: nenhum backup baixado ainda.</p><p id="autoBackupStatus" class="backup-status">Backup automático ainda não foi feito.</p><p id="cloudBackupStatus" class="backup-status">Backup na nuvem: aguardando sincronização.</p><p id="backupReminder" class="backup-reminder hidden"></p><div class="backup-actions"><button id="exportJson" class="primary backup-now" type="button">Fazer backup agora</button><button id="exportCsv" class="secondary" type="button">Baixar planilha CSV</button><button id="exportExcel" class="secondary" type="button">Baixar Excel completo</button><label class="file-button">Importar backup<input id="importJson" type="file" accept="application/json"></label></div></section>
+        <section class="panel trash-panel"><div class="panel-title-row"><div><h3>Lixeira de segurança</h3><span class="soft-label">Itens apagados ficam aqui para recuperar erro humano</span></div><button id="emptyTrash" class="secondary danger" type="button">Esvaziar lixeira</button></div><div id="trashList" class="list empty-state">Nenhum item apagado.</div></section>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="app-logic.js"></script>
+  <script src="supabase-config.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
