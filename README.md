@@ -1,59 +1,74 @@
-﻿# Lojinha da Jô
+# OrientaHub
 
-Aplicativo simples para controlar uma lojinha familiar pelo navegador do computador ou celular.
+OrientaHub e um aplicativo web para organizar orientacoes academicas, acompanhando alunos, trabalhos, prazos, status e comentarios em um unico lugar.
 
-## O que o app faz
+O sistema foi pensado para uso por orientador e alunos, com cadastro de estudantes, registro de trabalhos academicos e acompanhamento do andamento de cada entrega.
 
-- Cadastra produtos com preço pago, preço de venda e estoque.
-- Calcula lucro por unidade automaticamente.
-- Registra vendas e baixa o estoque.
-- Separa venda paga de venda que a pessoa vai pagar depois.
-- Guarda cliente, data da venda e data combinada para pagamento.
-- Mostra valores a receber e permite marcar como recebido.
-- Mostra resumo do dia, resumo do mês, lucro, estoque investido e produtos acabando.
-- Exporta vendas em CSV e exporta/importa backup em JSON.
+## Funcionalidades
 
-## Como abrir no computador
+- Login para orientador e alunos.
+- Cadastro de alunos com categoria e instituicao.
+- Registro de trabalhos como projeto, TCC, dissertacao, tese, artigo, relatorio e outros.
+- Acompanhamento de status: iniciado, em andamento, revisado, concluido e submetido.
+- Controle de datas importantes, como qualificacao, defesa, entregas e submissao de artigo.
+- Comentarios entre orientador e aluno em cada trabalho.
+- Upload/anexo de arquivos pelo aluno.
+- Painel do orientador com filtros por aluno, tipo e status.
+- Lista de prazos criticos.
+- Historico de trabalhos concluidos.
+- Recuperacao de senha por e-mail usando Supabase Edge Function.
 
-Abra o arquivo `index.html` com dois cliques.
+## Tecnologias
 
-Os dados ficam salvos no próprio navegador usado para abrir o app. Para não perder dados, use o botão `Baixar backup` de vez em quando.
+- HTML
+- CSS
+- JavaScript
+- Supabase
+- GitHub Pages
 
-## Como usar no celular
+## Como abrir
 
-Depois de publicar no GitHub Pages, abra o link no navegador do celular. Em muitos celulares aparece a opção de instalar ou adicionar à tela inicial.
+Este projeto deve ser aberto pelo link publicado no GitHub Pages ou por um servidor local.
 
-## Como subir no GitHub Pages
+Abrir o arquivo `index.html` diretamente no computador pode nao funcionar corretamente, porque o aplicativo usa banco de dados online.
 
-1. Crie um repositório no GitHub.
-2. Envie todos os arquivos desta pasta para o repositório.
-3. No GitHub, abra `Settings` > `Pages`.
-4. Em `Build and deployment`, escolha `Deploy from a branch`.
-5. Escolha a branch `main` e a pasta `/root`.
-6. Salve e aguarde o link ficar pronto.
+## Configuracao do banco de dados
 
-## Observação importante
+O projeto usa Supabase para salvar os dados do aplicativo.
 
-Esta primeira versão salva os dados no aparelho/navegador. Se abrir em outro celular, os dados não aparecem automaticamente. Para levar os dados para outro aparelho, use `Baixar backup` e depois `Importar backup`.
-## Sincronização com Supabase
+Para preparar o banco:
 
-O app já está preparado para sincronizar em nuvem pelo Supabase, mas precisa das chaves do seu projeto.
+1. Abra o Supabase.
+2. Acesse o SQL Editor.
+3. Rode o conteudo do arquivo `supabase_setup.sql`.
+4. Confira se a tabela `app_state` foi criada.
 
-1. Crie um projeto gratuito no Supabase.
-2. Em `Authentication > Users`, crie um usuário para a Joelma com o e-mail configurado em `supabase-config.js` e a senha `22111996`.
-3. Em `SQL Editor`, rode o arquivo `supabase-setup.sql`.
-4. Habilite Realtime para a tabela `lojinha_state` no painel do Supabase.
-5. Em `Project Settings > API`, copie a Project URL e a chave anon/public.
-6. Preencha `url` e `anonKey` no arquivo `supabase-config.js`.
-7. Publique no GitHub Pages e abra o mesmo link nos dois computadores.
+## Recuperacao de senha
 
-Quando a sincronização estiver funcionando, o topo do app mostra `Sincronizado`.
+A recuperacao de senha usa uma funcao do Supabase integrada ao Resend.
 
-## Cuidados para nao perder dados
+As instrucoes estao no arquivo:
 
-- Use o app pelo link publicado, nao abrindo `index.html` direto, quando quiser sincronizar entre celular e computador.
-- Antes de fechar o app, confira se o topo mostra `Sincronizado`.
-- Se aparecer erro, modo local ou sem internet, clique em `Baixar backup agora` antes de continuar em outro aparelho.
-- Evite editar ao mesmo tempo em dois aparelhos. O app protege contra sobrescrever dados mais novos, mas o uso mais seguro e terminar uma edicao, aguardar sincronizar e so depois abrir no outro aparelho.
-- O projeto nao usa geracao de imagem da OpenAI. As instrucoes locais em `AGENTS.md` tambem bloqueiam `gpt-image-2`, `image_generation`, `images.generate` e ferramentas de imagem em futuras tarefas.
+`SUPABASE_EMAIL_SETUP.md`
 
+## Arquivos principais
+
+- `index.html`: estrutura principal da pagina.
+- `styles.css`: estilos visuais do aplicativo.
+- `app.js`: logica do sistema, telas, cadastro, login, trabalhos, comentarios e integracao com Supabase.
+- `supabase_setup.sql`: criacao da tabela usada pelo app.
+- `send-reset-email.ts`: funcao para envio de e-mail de redefinicao de senha.
+- `gisprad-logo.jpeg`: imagem usada na tela de login.
+
+## Acesso inicial
+
+O acesso inicial do orientador esta configurado no aplicativo para testes.
+
+- Usuario: `orientador`
+- Senha: `1234`
+
+Depois de publicar, recomenda-se trocar esses dados no codigo antes de usar com dados reais.
+
+## Observacao
+
+Este repositorio corresponde ao projeto OrientaHub. Arquivos de outros projetos nao fazem parte deste aplicativo.
